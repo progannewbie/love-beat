@@ -1,234 +1,425 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Love Beat</title>
-  <style>
-    * {
-      box-sizing: border-box;
+<script type="module">
+  import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+  import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000000);
+
+  const camera = new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
+  camera.position.set(0, 0, 38);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.enablePan = false;
+  controls.enableZoom = true;
+  controls.minDistance = 18;
+  controls.maxDistance = 80;
+  controls.autoRotate = false;
+  controls.target.set(0, 0, 0);
+
+  const group = new THREE.Group();
+  scene.add(group);
+
+  const glowLight = new THREE.PointLight(0xffffff, 2.2, 200);
+  glowLight.position.set(0, 0, 30);
+  scene.add(glowLight);
+
+  const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+  scene.add(ambient);
+
+  function heartPoint(t, scale = 1) {
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y =
+      13 * Math.cos(t) -
+      5 * Math.cos(2 * t) -
+      2 * Math.cos(3 * t) -
+      Math.cos(4 * t);
+
+    return new THREE.Vector3(x * scale, y * scale, 0);
+  }
+
+  const pointCount = 5000;
+  const positions = new Float32Array(pointCount * 3);
+  const colors = new Float32Array(pointCount * 3);
+  const seeds = [];
+  const color = new THREE.Color();
+
+  for (let i = 0; i < pointCount; i++) {
+    const t = Math.random() * Math.PI * 2;
+    const base = heartPoint(t, 0.9 + Math.random() * 0.35);
+
+    const depth = (Math.random() - 0.5) * 8;
+    const spread = (Math.random() - 0.5) * 1.4;
+
+    positions[i * 3] = base.x + spread;
+    positions[i * 3 + 1] = base.y + spread;
+    positions[i * 3 + 2] = depth;
+
+    const hue = (i / pointCount) * 360;
+    color.setHSL(hue / 360, 1, 0.6);
+    colors[i * 3] = color.r;
+    colors[i * 3 + 1] = color.g;
+    colors[i * 3 + 2] = color.b;
+
+    seeds.push({
+      t,
+      offset: Math.random() * Math.PI * 2,
+      radius: 0.5 + Math.random() * 1.5,
+      depth,
+    });
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+  const material = new THREE.PointsMaterial({
+    size: 0.28,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.95,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+
+  const heartPoints = new THREE.Points(geometry, material);
+  group.add(heartPoints);
+
+  const outerCount = 1200;
+  const outerPositions = new Float32Array(outerCount * 3);
+  const outerColors = new Float32Array(outerCount * 3);
+  const outerSeeds = [];
+
+  for (let i = 0; i < outerCount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 18 + Math.random() * 10;
+    const z = (Math.random() - 0.5) * 20;
+
+    outerPositions[i * 3] = Math.cos(angle) * radius;
+    outerPositions[i * 3 + 1] = Math.sin(angle) * radius;
+    outerPositions[i * 3 + 2] = z;
+
+    const hue = (angle / (Math.PI * 2)) * 360;
+    color.setHSL(hue / 360, 1, 0.65);
+    outerColors[i * 3] = color.r;
+    outerColors[i * 3 + 1] = color.g;
+    outerColors[i * 3 + 2] = color.b;
+
+    outerSeeds.push({
+      angle,
+      radius,
+      speed: 0.2 + Math.random() * 0.5,
+      z,
+    });
+  }
+
+  const outerGeometry = new THREE.BufferGeometry();
+  outerGeometry.setAttribute("position", new THREE.BufferAttribute(outerPositions, 3));
+  outerGeometry.setAttribute("color", new THREE.BufferAttribute(outerColors, 3));
+
+  const outerMaterial = new THREE.PointsMaterial({
+    size: 0.2,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.55,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+
+  const aura = new THREE.Points(outerGeometry, outerMaterial);
+  group.add(aura);
+
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    const t = clock.getElapsedTime();
+    const beat =
+      1 +
+      0.06 * Math.sin(t * 2.4) +
+      0.03 * Math.sin(t * 4.8) +
+      0.015 * Math.sin(t * 9.6);
+
+    const pos = geometry.attributes.position.array;
+    const col = geometry.attributes.color.array;
+
+    for (let i = 0; i < pointCount; i++) {
+      const seed = seeds[i];
+      const p = heartPoint(seed.t, beat * (0.92 + seed.radius * 0.08));
+
+      const wave = Math.sin(t * 2 + seed.offset) * 0.6;
+      pos[i * 3] = p.x + Math.cos(seed.offset + t) * 0.25;
+      pos[i * 3 + 1] = p.y + Math.sin(seed.offset + t * 1.2) * 0.25;
+      pos[i * 3 + 2] = seed.depth + wave;
+
+      const hue = ((i / pointCount) * 360 + t * 80) % 360;
+      color.setHSL(hue / 360, 1, 0.62);
+      col[i * 3] = color.r;
+      col[i * 3 + 1] = color.g;
+      col[i * 3 + 2] = color.b;
     }
 
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #000;
-      font-family: Arial, sans-serif;
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.color.needsUpdate = true;
+
+    const outerPos = outerGeometry.attributes.position.array;
+    const outerCol = outerGeometry.attributes.color.array;
+
+    for (let i = 0; i < outerCount; i++) {
+      const seed = outerSeeds[i];
+      const a = seed.angle + t * seed.speed * 0.2;
+      const r = seed.radius + Math.sin(t * 2 + i * 0.05) * 0.6;
+
+      outerPos[i * 3] = Math.cos(a) * r;
+      outerPos[i * 3 + 1] = Math.sin(a) * r;
+      outerPos[i * 3 + 2] = seed.z + Math.sin(t + i * 0.08) * 0.8;
+
+      const hue = (((a % (Math.PI * 2)) / (Math.PI * 2)) * 360 + t * 40) % 360;
+      color.setHSL(hue / 360, 1, 0.65);
+      outerCol[i * 3] = color.r;
+      outerCol[i * 3 + 1] = color.g;
+      outerCol[i * 3 + 2] = color.b;
     }
 
-    #canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
+    outerGeometry.attributes.position.needsUpdate = true;
+    outerGeometry.attributes.color.needsUpdate = true;
+
+    group.rotation.y += 0.003;
+    group.rotation.x = Math.sin(t * 0.6) * 0.12;
+
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script><script type="module">
+  import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+  import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000000);
+
+  const camera = new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
+  camera.position.set(0, 0, 38);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.enablePan = false;
+  controls.enableZoom = true;
+  controls.minDistance = 18;
+  controls.maxDistance = 80;
+  controls.autoRotate = false;
+  controls.target.set(0, 0, 0);
+
+  const group = new THREE.Group();
+  scene.add(group);
+
+  const glowLight = new THREE.PointLight(0xffffff, 2.2, 200);
+  glowLight.position.set(0, 0, 30);
+  scene.add(glowLight);
+
+  const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+  scene.add(ambient);
+
+  function heartPoint(t, scale = 1) {
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y =
+      13 * Math.cos(t) -
+      5 * Math.cos(2 * t) -
+      2 * Math.cos(3 * t) -
+      Math.cos(4 * t);
+
+    return new THREE.Vector3(x * scale, y * scale, 0);
+  }
+
+  const pointCount = 5000;
+  const positions = new Float32Array(pointCount * 3);
+  const colors = new Float32Array(pointCount * 3);
+  const seeds = [];
+  const color = new THREE.Color();
+
+  for (let i = 0; i < pointCount; i++) {
+    const t = Math.random() * Math.PI * 2;
+    const base = heartPoint(t, 0.9 + Math.random() * 0.35);
+
+    const depth = (Math.random() - 0.5) * 8;
+    const spread = (Math.random() - 0.5) * 1.4;
+
+    positions[i * 3] = base.x + spread;
+    positions[i * 3 + 1] = base.y + spread;
+    positions[i * 3 + 2] = depth;
+
+    const hue = (i / pointCount) * 360;
+    color.setHSL(hue / 360, 1, 0.6);
+    colors[i * 3] = color.r;
+    colors[i * 3 + 1] = color.g;
+    colors[i * 3 + 2] = color.b;
+
+    seeds.push({
+      t,
+      offset: Math.random() * Math.PI * 2,
+      radius: 0.5 + Math.random() * 1.5,
+      depth,
+    });
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+  const material = new THREE.PointsMaterial({
+    size: 0.28,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.95,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+
+  const heartPoints = new THREE.Points(geometry, material);
+  group.add(heartPoints);
+
+  const outerCount = 1200;
+  const outerPositions = new Float32Array(outerCount * 3);
+  const outerColors = new Float32Array(outerCount * 3);
+  const outerSeeds = [];
+
+  for (let i = 0; i < outerCount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 18 + Math.random() * 10;
+    const z = (Math.random() - 0.5) * 20;
+
+    outerPositions[i * 3] = Math.cos(angle) * radius;
+    outerPositions[i * 3 + 1] = Math.sin(angle) * radius;
+    outerPositions[i * 3 + 2] = z;
+
+    const hue = (angle / (Math.PI * 2)) * 360;
+    color.setHSL(hue / 360, 1, 0.65);
+    outerColors[i * 3] = color.r;
+    outerColors[i * 3 + 1] = color.g;
+    outerColors[i * 3 + 2] = color.b;
+
+    outerSeeds.push({
+      angle,
+      radius,
+      speed: 0.2 + Math.random() * 0.5,
+      z,
+    });
+  }
+
+  const outerGeometry = new THREE.BufferGeometry();
+  outerGeometry.setAttribute("position", new THREE.BufferAttribute(outerPositions, 3));
+  outerGeometry.setAttribute("color", new THREE.BufferAttribute(outerColors, 3));
+
+  const outerMaterial = new THREE.PointsMaterial({
+    size: 0.2,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.55,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+
+  const aura = new THREE.Points(outerGeometry, outerMaterial);
+  group.add(aura);
+
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    const t = clock.getElapsedTime();
+    const beat =
+      1 +
+      0.06 * Math.sin(t * 2.4) +
+      0.03 * Math.sin(t * 4.8) +
+      0.015 * Math.sin(t * 9.6);
+
+    const pos = geometry.attributes.position.array;
+    const col = geometry.attributes.color.array;
+
+    for (let i = 0; i < pointCount; i++) {
+      const seed = seeds[i];
+      const p = heartPoint(seed.t, beat * (0.92 + seed.radius * 0.08));
+
+      const wave = Math.sin(t * 2 + seed.offset) * 0.6;
+      pos[i * 3] = p.x + Math.cos(seed.offset + t) * 0.25;
+      pos[i * 3 + 1] = p.y + Math.sin(seed.offset + t * 1.2) * 0.25;
+      pos[i * 3 + 2] = seed.depth + wave;
+
+      const hue = ((i / pointCount) * 360 + t * 80) % 360;
+      color.setHSL(hue / 360, 1, 0.62);
+      col[i * 3] = color.r;
+      col[i * 3 + 1] = color.g;
+      col[i * 3 + 2] = color.b;
     }
 
-    .label {
-      position: fixed;
-      left: 50%;
-      bottom: 24px;
-      transform: translateX(-50%);
-      color: rgba(255, 255, 255, 0.78);
-      font-size: 14px;
-      letter-spacing: 2px;
-      text-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
-      pointer-events: none;
-    }
-  </style>
-</head>
-<body>
-  <canvas id="canvas"></canvas>
-  <div class="label">Love Beat</div>
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.color.needsUpdate = true;
 
-  <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
+    const outerPos = outerGeometry.attributes.position.array;
+    const outerCol = outerGeometry.attributes.color.array;
 
-    let width = 0;
-    let height = 0;
-    let dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let time = 0;
+    for (let i = 0; i < outerCount; i++) {
+      const seed = outerSeeds[i];
+      const a = seed.angle + t * seed.speed * 0.2;
+      const r = seed.radius + Math.sin(t * 2 + i * 0.05) * 0.6;
 
-    function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
+      outerPos[i * 3] = Math.cos(a) * r;
+      outerPos[i * 3 + 1] = Math.sin(a) * r;
+      outerPos[i * 3 + 2] = seed.z + Math.sin(t + i * 0.08) * 0.8;
 
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + "px";
-      canvas.style.height = height + "px";
-
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const hue = (((a % (Math.PI * 2)) / (Math.PI * 2)) * 360 + t * 40) % 360;
+      color.setHSL(hue / 360, 1, 0.65);
+      outerCol[i * 3] = color.r;
+      outerCol[i * 3 + 1] = color.g;
+      outerCol[i * 3 + 2] = color.b;
     }
 
-    function heartPoint(t, scale) {
-      const x = 16 * Math.pow(Math.sin(t), 3);
-      const y =
-        13 * Math.cos(t) -
-        5 * Math.cos(2 * t) -
-        2 * Math.cos(3 * t) -
-        Math.cos(4 * t);
+    outerGeometry.attributes.position.needsUpdate = true;
+    outerGeometry.attributes.color.needsUpdate = true;
 
-      return {
-        x: x * scale,
-        y: -y * scale,
-      };
-    }
+    group.rotation.y += 0.003;
+    group.rotation.x = Math.sin(t * 0.6) * 0.12;
 
-    function hsl(h, s = 100, l = 60, a = 1) {
-      return `hsla(${h}, ${s}%, ${l}%, ${a})`;
-    }
+    controls.update();
+    renderer.render(scene, camera);
+  }
 
-    function drawBackground() {
-      const g = ctx.createRadialGradient(
-        width / 2,
-        height / 2,
-        10,
-        width / 2,
-        height / 2,
-        Math.max(width, height) * 0.8
-      );
+  animate();
 
-      g.addColorStop(0, "rgba(30, 30, 40, 0.35)");
-      g.addColorStop(0.45, "rgba(10, 10, 20, 0.18)");
-      g.addColorStop(1, "rgba(0, 0, 0, 1)");
-
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, width, height);
-    }
-
-    function drawGlowHeart(scalePulse) {
-      const cx = width / 2;
-      const cy = height / 2;
-      const baseScale = Math.min(width, height) * 0.015 * scalePulse;
-      const hueBase = (time * 80) % 360;
-
-      ctx.save();
-      ctx.translate(cx, cy);
-
-      for (let layer = 0; layer < 7; layer++) {
-        const alpha = 0.05 + layer * 0.03;
-        const spread = 1 + layer * 0.12;
-        const hue = (hueBase + layer * 25) % 360;
-
-        ctx.beginPath();
-        for (let i = 0; i <= Math.PI * 2 + 0.01; i += 0.02) {
-          const p = heartPoint(i, baseScale * spread);
-          if (i === 0) ctx.moveTo(p.x, p.y);
-          else ctx.lineTo(p.x, p.y);
-        }
-        ctx.closePath();
-
-        ctx.shadowBlur = 28 + layer * 12;
-        ctx.shadowColor = hsl(hue, 100, 60, alpha);
-        ctx.fillStyle = hsl(hue, 90, 55, alpha);
-        ctx.fill();
-      }
-
-      ctx.beginPath();
-      for (let i = 0; i <= Math.PI * 2 + 0.01; i += 0.02) {
-        const p = heartPoint(i, baseScale);
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      }
-      ctx.closePath();
-
-      const fillGradient = ctx.createLinearGradient(0, -160, 0, 160);
-      fillGradient.addColorStop(0, hsl((hueBase + 0) % 360, 100, 72, 1));
-      fillGradient.addColorStop(0.25, hsl((hueBase + 60) % 360, 100, 65, 1));
-      fillGradient.addColorStop(0.5, hsl((hueBase + 140) % 360, 100, 60, 1));
-      fillGradient.addColorStop(0.75, hsl((hueBase + 220) % 360, 100, 62, 1));
-      fillGradient.addColorStop(1, hsl((hueBase + 300) % 360, 100, 68, 1));
-
-      ctx.shadowBlur = 36;
-      ctx.shadowColor = hsl((hueBase + 40) % 360, 100, 65, 0.95);
-      ctx.fillStyle = fillGradient;
-      ctx.fill();
-
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "rgba(255,255,255,0.9)";
-      ctx.stroke();
-
-      ctx.restore();
-    }
-
-    function drawParticles(scalePulse) {
-      const cx = width / 2;
-      const cy = height / 2;
-      const baseScale = Math.min(width, height) * 0.015 * scalePulse;
-
-      for (let i = 0; i < 260; i++) {
-        const t = (i / 260) * Math.PI * 2;
-        const p = heartPoint(t, baseScale * (0.86 + Math.random() * 0.3));
-
-        const flicker = 0.5 + 0.5 * Math.sin(time * 4 + i * 0.35);
-        const size = 1 + flicker * 2.2;
-        const offsetX = Math.sin(time * 2.1 + i * 0.23) * 4;
-        const offsetY = Math.cos(time * 1.8 + i * 0.17) * 4;
-        const hue = (time * 120 + i * 4) % 360;
-
-        ctx.beginPath();
-        ctx.arc(cx + p.x + offsetX, cy + p.y + offsetY, size, 0, Math.PI * 2);
-
-        ctx.shadowBlur = 10 + flicker * 6;
-        ctx.shadowColor = hsl(hue, 100, 60, 0.9);
-        ctx.fillStyle = hsl(hue, 100, 70, 0.35 + flicker * 0.45);
-        ctx.fill();
-      }
-    }
-
-    function drawAura(scalePulse) {
-      const cx = width / 2;
-      const cy = height / 2;
-      const r = Math.min(width, height) * 0.18 * scalePulse;
-      const hueBase = (time * 70) % 360;
-
-      const g = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r);
-      g.addColorStop(0, hsl((hueBase + 40) % 360, 100, 60, 0.18));
-      g.addColorStop(0.5, hsl((hueBase + 180) % 360, 100, 55, 0.1));
-      g.addColorStop(1, "rgba(0,0,0,0)");
-
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    function drawText() {
-      ctx.save();
-      ctx.textAlign = "center";
-      ctx.font = "16px Arial";
-      ctx.fillStyle = "rgba(255,255,255,0.75)";
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = hsl((time * 100) % 360, 100, 65, 0.9);
-      ctx.fillText("Love Beat", width / 2, height - 30);
-      ctx.restore();
-    }
-
-    function animate() {
-      time += 0.03;
-
-      ctx.clearRect(0, 0, width, height);
-      drawBackground();
-
-      const beat =
-        1 +
-        0.08 * Math.sin(time * 2.2) +
-        0.05 * Math.sin(time * 4.4) +
-        0.025 * Math.sin(time * 8.8);
-
-      drawAura(beat);
-      drawParticles(beat);
-      drawGlowHeart(beat);
-      drawText();
-
-      requestAnimationFrame(animate);
-    }
-
-    resize();
-    animate();
-    window.addEventListener("resize", resize);
-  </script>
-</body>
-</html>
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
