@@ -14,7 +14,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #000;
+      background: radial-gradient(circle at center, #111 0%, #000 65%);
       font-family: Arial, sans-serif;
     }
 
@@ -27,19 +27,34 @@
       left: 50%;
       bottom: 24px;
       transform: translateX(-50%);
-      color: rgba(255,255,255,0.75);
+      color: rgba(255, 255, 255, 0.72);
       font-size: 14px;
       letter-spacing: 2px;
-      text-shadow: 0 0 12px rgba(255,255,255,0.35);
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
       pointer-events: none;
+      z-index: 2;
+    }
+
+    .hint {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 12px;
+      letter-spacing: 1px;
+      pointer-events: none;
+      z-index: 2;
     }
   </style>
 </head>
 <body>
+  <div class="hint">拖曳旋轉 · 滾輪縮放</div>
   <div class="label">Love Beat · Rainbow 3D</div>
 
   <script type="module">
     import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+    import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
@@ -50,21 +65,41 @@
       0.1,
       1000
     );
-    camera.position.z = 38;
+    camera.position.set(0, 0, 38);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true
+    });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = false;
+    controls.enableZoom = true;
+    controls.rotateSpeed = 0.9;
+    controls.zoomSpeed = 1.0;
+    controls.minDistance = 16;
+    controls.maxDistance = 85;
+    controls.minPolarAngle = Math.PI * 0.15;
+    controls.maxPolarAngle = Math.PI * 0.85;
+    controls.target.set(0, 0, 0);
+
     const group = new THREE.Group();
     scene.add(group);
 
-    const glowLight = new THREE.PointLight(0xffffff, 2.2, 200);
+    const glowLight = new THREE.PointLight(0xffffff, 2.4, 200);
     glowLight.position.set(0, 0, 30);
     scene.add(glowLight);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+    const light2 = new THREE.PointLight(0xffffff, 1.5, 160);
+    light2.position.set(0, 10, -20);
+    scene.add(light2);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambient);
 
     function heartPoint(t, scale = 1) {
@@ -78,39 +113,43 @@
       return new THREE.Vector3(x * scale, y * scale, 0);
     }
 
-    const pointCount = 5000;
+    const color = new THREE.Color();
+
+    const pointCount = 7000;
     const positions = new Float32Array(pointCount * 3);
     const colors = new Float32Array(pointCount * 3);
+    const sizes = [];
     const seeds = [];
-
-    const color = new THREE.Color();
 
     for (let i = 0; i < pointCount; i++) {
       const t = Math.random() * Math.PI * 2;
-      const base = heartPoint(t, 0.9 + Math.random() * 0.35);
+      const heartScale = 0.82 + Math.random() * 0.42;
+      const base = heartPoint(t, heartScale);
 
-      const depth = (Math.random() - 0.5) * 8;
-      const spread = (Math.random() - 0.5) * 1.4;
+      const shell = Math.pow(Math.random(), 0.65);
+      const jitter = (1 - shell) * 2.0;
 
-      const x = base.x + spread;
-      const y = base.y + spread;
-      const z = depth;
+      const x = base.x * shell + (Math.random() - 0.5) * jitter;
+      const y = base.y * shell + (Math.random() - 0.5) * jitter;
+      const z = (Math.random() - 0.5) * 10 * (0.35 + Math.random());
 
       positions[i * 3] = x;
       positions[i * 3 + 1] = y;
       positions[i * 3 + 2] = z;
 
       const hue = (i / pointCount) * 360;
-      color.setHSL(hue / 360, 1, 0.6);
+      color.setHSL(hue / 360, 1, 0.62);
       colors[i * 3] = color.r;
       colors[i * 3 + 1] = color.g;
       colors[i * 3 + 2] = color.b;
 
+      sizes.push(0.7 + Math.random() * 1.8);
       seeds.push({
         t,
-        offset: Math.random() * Math.PI * 2,
-        radius: 0.5 + Math.random() * 1.5,
-        depth,
+        shell,
+        jitterSeed: Math.random() * Math.PI * 2,
+        driftSeed: Math.random() * Math.PI * 2,
+        depth: z
       });
     }
 
@@ -119,64 +158,87 @@
     geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-      size: 0.28,
+      size: 0.24,
       vertexColors: true,
       transparent: true,
       opacity: 0.95,
       blending: THREE.AdditiveBlending,
-      depthWrite: false,
+      depthWrite: false
     });
 
-    const heartPoints = new THREE.Points(geometry, material);
-    group.add(heartPoints);
+    const heart = new THREE.Points(geometry, material);
+    group.add(heart);
 
-    const outerCount = 1200;
-    const outerPositions = new Float32Array(outerCount * 3);
-    const outerColors = new Float32Array(outerCount * 3);
-    const outerSeeds = [];
+    const auraCount = 1800;
+    const auraPositions = new Float32Array(auraCount * 3);
+    const auraColors = new Float32Array(auraCount * 3);
+    const auraSeeds = [];
 
-    for (let i = 0; i < outerCount; i++) {
+    for (let i = 0; i < auraCount; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const radius = 18 + Math.random() * 10;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-      const z = (Math.random() - 0.5) * 20;
+      const radius = 17 + Math.random() * 12;
+      const z = (Math.random() - 0.5) * 22;
 
-      outerPositions[i * 3] = x;
-      outerPositions[i * 3 + 1] = y;
-      outerPositions[i * 3 + 2] = z;
+      auraPositions[i * 3] = Math.cos(angle) * radius;
+      auraPositions[i * 3 + 1] = Math.sin(angle) * radius;
+      auraPositions[i * 3 + 2] = z;
 
-      const hue = (angle / (Math.PI * 2)) * 360;
-      color.setHSL(hue / 360, 1, 0.65);
-      outerColors[i * 3] = color.r;
-      outerColors[i * 3 + 1] = color.g;
-      outerColors[i * 3 + 2] = color.b;
+      const hue = ((angle / (Math.PI * 2)) * 360 + i * 0.08) % 360;
+      color.setHSL(hue / 360, 1, 0.67);
+      auraColors[i * 3] = color.r;
+      auraColors[i * 3 + 1] = color.g;
+      auraColors[i * 3 + 2] = color.b;
 
-      outerSeeds.push({
+      auraSeeds.push({
         angle,
         radius,
-        speed: 0.2 + Math.random() * 0.5,
-        z,
+        speed: 0.15 + Math.random() * 0.45,
+        floatSeed: Math.random() * Math.PI * 2,
+        z
       });
     }
 
-    const outerGeometry = new THREE.BufferGeometry();
-    outerGeometry.setAttribute("position", new THREE.BufferAttribute(outerPositions, 3));
-    outerGeometry.setAttribute("color", new THREE.BufferAttribute(outerColors, 3));
+    const auraGeometry = new THREE.BufferGeometry();
+    auraGeometry.setAttribute("position", new THREE.BufferAttribute(auraPositions, 3));
+    auraGeometry.setAttribute("color", new THREE.BufferAttribute(auraColors, 3));
 
-    const outerMaterial = new THREE.PointsMaterial({
-      size: 0.2,
+    const auraMaterial = new THREE.PointsMaterial({
+      size: 0.18,
       vertexColors: true,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.5,
       blending: THREE.AdditiveBlending,
-      depthWrite: false,
+      depthWrite: false
     });
 
-    const aura = new THREE.Points(outerGeometry, outerMaterial);
+    const aura = new THREE.Points(auraGeometry, auraMaterial);
     group.add(aura);
 
+    const haloGeometry = new THREE.RingGeometry(11.5, 12.2, 128);
+    const haloMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.08,
+      side: THREE.DoubleSide
+    });
+    const halo = new THREE.Mesh(haloGeometry, haloMaterial);
+    halo.rotation.x = Math.PI / 2;
+    halo.position.z = -6;
+    group.add(halo);
+
     const clock = new THREE.Clock();
+    let userInteracting = false;
+    let idleTimer = 0;
+
+    controls.addEventListener("start", () => {
+      userInteracting = true;
+      idleTimer = 0;
+    });
+
+    controls.addEventListener("end", () => {
+      userInteracting = false;
+      idleTimer = 0;
+    });
 
     function animate() {
       requestAnimationFrame(animate);
@@ -184,24 +246,36 @@
       const t = clock.getElapsedTime();
       const beat =
         1 +
-        0.06 * Math.sin(t * 2.4) +
-        0.03 * Math.sin(t * 4.8) +
-        0.015 * Math.sin(t * 9.6);
+        0.065 * Math.sin(t * 2.5) +
+        0.032 * Math.sin(t * 5.0) +
+        0.015 * Math.sin(t * 10.0);
 
       const pos = geometry.attributes.position.array;
       const col = geometry.attributes.color.array;
 
       for (let i = 0; i < pointCount; i++) {
         const seed = seeds[i];
-        const p = heartPoint(seed.t, beat * (0.92 + seed.radius * 0.08));
+        const base = heartPoint(seed.t, beat * (0.86 + (1 - seed.shell) * 0.32));
 
-        const wave = Math.sin(t * 2 + seed.offset) * 0.6;
-        pos[i * 3] = p.x + Math.cos(seed.offset + t) * 0.25;
-        pos[i * 3 + 1] = p.y + Math.sin(seed.offset + t * 1.2) * 0.25;
-        pos[i * 3 + 2] = seed.depth + wave;
+        const jitterAmp = (1 - seed.shell) * 1.6;
+        const drift = Math.sin(t * 1.8 + seed.driftSeed) * 0.35;
 
-        const hue = ((i / pointCount) * 360 + t * 80) % 360;
-        color.setHSL(hue / 360, 1, 0.62);
+        pos[i * 3] =
+          base.x * seed.shell +
+          Math.cos(seed.jitterSeed + t * 1.4) * jitterAmp +
+          drift * 0.2;
+
+        pos[i * 3 + 1] =
+          base.y * seed.shell +
+          Math.sin(seed.jitterSeed + t * 1.6) * jitterAmp +
+          drift * 0.15;
+
+        pos[i * 3 + 2] =
+          seed.depth +
+          Math.sin(t * 2.0 + seed.driftSeed) * 0.9;
+
+        const hue = ((i / pointCount) * 360 + t * 75) % 360;
+        color.setHSL(hue / 360, 1, 0.63);
         col[i * 3] = color.r;
         col[i * 3 + 1] = color.g;
         col[i * 3 + 2] = color.b;
@@ -210,31 +284,38 @@
       geometry.attributes.position.needsUpdate = true;
       geometry.attributes.color.needsUpdate = true;
 
-      const outerPos = outerGeometry.attributes.position.array;
-      const outerCol = outerGeometry.attributes.color.array;
+      const auraPos = auraGeometry.attributes.position.array;
+      const auraCol = auraGeometry.attributes.color.array;
 
-      for (let i = 0; i < outerCount; i++) {
-        const seed = outerSeeds[i];
-        const a = seed.angle + t * seed.speed * 0.2;
-        const r = seed.radius + Math.sin(t * 2 + i * 0.05) * 0.6;
+      for (let i = 0; i < auraCount; i++) {
+        const seed = auraSeeds[i];
+        const a = seed.angle + t * seed.speed * 0.22;
+        const r = seed.radius + Math.sin(t * 1.7 + seed.floatSeed) * 0.9;
 
-        outerPos[i * 3] = Math.cos(a) * r;
-        outerPos[i * 3 + 1] = Math.sin(a) * r;
-        outerPos[i * 3 + 2] = seed.z + Math.sin(t + i * 0.08) * 0.8;
+        auraPos[i * 3] = Math.cos(a) * r;
+        auraPos[i * 3 + 1] = Math.sin(a) * r;
+        auraPos[i * 3 + 2] = seed.z + Math.sin(t * 1.4 + seed.floatSeed) * 1.2;
 
-        const hue = (((a % (Math.PI * 2)) / (Math.PI * 2)) * 360 + t * 40) % 360;
-        color.setHSL(hue / 360, 1, 0.65);
-        outerCol[i * 3] = color.r;
-        outerCol[i * 3 + 1] = color.g;
-        outerCol[i * 3 + 2] = color.b;
+        const hue = (((a / (Math.PI * 2)) * 360) + t * 30 + i * 0.03) % 360;
+        color.setHSL(hue / 360, 1, 0.68);
+        auraCol[i * 3] = color.r;
+        auraCol[i * 3 + 1] = color.g;
+        auraCol[i * 3 + 2] = color.b;
       }
 
-      outerGeometry.attributes.position.needsUpdate = true;
-      outerGeometry.attributes.color.needsUpdate = true;
+      auraGeometry.attributes.position.needsUpdate = true;
+      auraGeometry.attributes.color.needsUpdate = true;
 
-      group.rotation.y = t * 0.35;
-      group.rotation.x = Math.sin(t * 0.6) * 0.18;
+      halo.material.opacity = 0.05 + Math.abs(Math.sin(t * 2.5)) * 0.05;
+      halo.scale.setScalar(beat * 1.03);
 
+      if (!userInteracting) {
+        idleTimer += 0.01;
+        group.rotation.y += 0.0025;
+        group.rotation.x = Math.sin(t * 0.55) * 0.08;
+      }
+
+      controls.update();
       renderer.render(scene, camera);
     }
 
