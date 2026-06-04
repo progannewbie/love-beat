@@ -19,14 +19,46 @@
     }
 
     canvas {
+      position: fixed;
+      inset: 0;
       display: block;
       width: 100%;
       height: 100%;
     }
+
+    .scene {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #000;
+    }
+
+    .dog {
+      position: absolute;
+      right: 12%;
+      top: 50%;
+      width: min(26vw, 320px);
+      transform: translateY(-48%);
+      filter: drop-shadow(0 0 16px rgba(255, 120, 190, 0.16));
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+    }
+
+    @media (max-width: 900px) {
+      .dog {
+        right: 6%;
+        width: min(34vw, 250px);
+      }
+    }
   </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <div class="scene">
+    <canvas id="canvas"></canvas>
+    <img class="dog" src="image.png" alt="dog" />
+  </div>
 
   <script>
     const canvas = document.getElementById("canvas");
@@ -172,95 +204,6 @@
       }
     }
 
-    function drawPuppy(x, y, scale, cuddle) {
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(scale, scale);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      const line = "#171717";
-      const fur = "#e3c28e";
-      const ear = "#d8ab70";
-      const collar = "#ff8ca3";
-      const bob = Math.sin(time * 2.8) * 1.5;
-      const pawLift = 4 + cuddle * 5;
-
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = line;
-      ctx.fillStyle = fur;
-
-      ctx.beginPath();
-      ctx.ellipse(0, 14 + bob, 42, 36, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.ellipse(0, -38 + bob, 38, 32, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = ear;
-      ctx.beginPath();
-      ctx.ellipse(-22, -72 + bob, 12, 23, -0.28, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.ellipse(22, -72 + bob, 12, 23, 0.28, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = fur;
-      ctx.beginPath();
-      ctx.ellipse(-22, 58 + bob, 9, 20, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.ellipse(2, 60 + bob, 9, 20, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.ellipse(-22, 28 - pawLift + bob, 9, 19, -0.45, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.ellipse(22, 28 - pawLift + bob, 9, 19, 0.45, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = collar;
-      ctx.beginPath();
-      ctx.moveTo(-21, -14 + bob);
-      ctx.quadraticCurveTo(0, -8 + bob, 21, -14 + bob);
-      ctx.stroke();
-
-      ctx.fillStyle = line;
-      ctx.beginPath();
-      ctx.arc(-10, -42 + bob, 3.2, 0, Math.PI * 2);
-      ctx.arc(10, -42 + bob, 3.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(0, -30 + bob, 3.8, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = line;
-      ctx.beginPath();
-      ctx.moveTo(0, -26 + bob);
-      ctx.quadraticCurveTo(-6, -20 + bob, -13, -24 + bob);
-      ctx.moveTo(0, -26 + bob);
-      ctx.quadraticCurveTo(6, -20 + bob, 13, -24 + bob);
-      ctx.stroke();
-
-      ctx.restore();
-    }
-
     function animate() {
       time += 0.016;
       ctx.clearRect(0, 0, width, height);
@@ -272,12 +215,9 @@
         0.016 * Math.sin(time * 4.8) +
         0.008 * Math.sin(time * 9.6);
 
-      const heartX = width * 0.38;
-      const heartY = height * 0.47;
+      const heartX = width * 0.30;
+      const heartY = height * 0.46;
       drawParticleHeart(heartX, heartY, beat);
-
-      const cuddle = 0.5 + 0.5 * Math.sin(time * 2.4);
-      drawPuppy(width * 0.68, height * 0.60, 1.28, cuddle);
 
       requestAnimationFrame(animate);
     }
