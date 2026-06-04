@@ -53,7 +53,9 @@
     let puppyCanvas = null;
 
     const puppyImage = new Image();
+    const photoImage = new Image();
     const heartParticles = [];
+    let photoReady = false;
 
     function resize() {
       width = window.innerWidth;
@@ -157,7 +159,7 @@
       if (width <= 620) {
         const size = Math.min(width * 0.78, height * 0.52, 320);
         return {
-          x: width * 0.5,
+          x: width * 0.55,
           y: height * 0.55,
           size,
         };
@@ -165,9 +167,16 @@
 
       const size = Math.min(width * 0.34, height * 0.56, 390);
       return {
-        x: width * 0.55,
+        x: width * 0.66,
         y: height * 0.53,
         size,
+      };
+    }
+
+    function getHeartAnchor(frame) {
+      return {
+        x: frame.x - frame.size * 0.34,
+        y: frame.y + frame.size * 0.01,
       };
     }
 
@@ -185,8 +194,9 @@
     }
 
     function drawParticleHeart(frame, beat) {
-      const x = frame.x - frame.size * 0.245;
-      const y = frame.y + frame.size * 0.01;
+      const heart = getHeartAnchor(frame);
+      const x = heart.x;
+      const y = heart.y;
       const scale = (frame.size / 240) * beat;
 
       ctx.save();
@@ -208,6 +218,51 @@
         ctx.fill();
       }
 
+      ctx.restore();
+    }
+
+    function drawPhotoInHeart(frame, beat) {
+      if (!photoReady) return;
+
+      const heart = getHeartAnchor(frame);
+      const x = heart.x;
+      const y = heart.y;
+      const scale = (frame.size / 240) * beat;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+
+      ctx.beginPath();
+      for (let t = 0; t <= Math.PI * 2 + 0.01; t += 0.03) {
+        const p = heartPoint(t, 2.15);
+        if (t === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.closePath();
+
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = "rgba(255, 120, 190, 0.75)";
+      ctx.fillStyle = "rgba(255, 210, 236, 0.18)";
+      ctx.fill();
+      ctx.clip();
+
+      const photoSize = 82;
+      const photoRatio = photoImage.naturalWidth / photoImage.naturalHeight;
+      let sx = 0;
+      let sy = 0;
+      let sw = photoImage.naturalWidth;
+      let sh = photoImage.naturalHeight;
+
+      if (photoRatio > 1) {
+        sw = photoImage.naturalHeight;
+        sx = (photoImage.naturalWidth - sw) / 2;
+      } else {
+        sh = photoImage.naturalWidth;
+        sy = (photoImage.naturalHeight - sh) / 2;
+      }
+
+      ctx.drawImage(photoImage, sx, sy, sw, sh, -photoSize / 2, -photoSize / 2, photoSize, photoSize);
       ctx.restore();
     }
 
@@ -251,6 +306,7 @@
 
       const frame = getPuppyFrame();
       drawPuppyBody(frame);
+      drawPhotoInHeart(frame, beat);
       drawParticleHeart(frame, beat);
       drawHoldingPaw(frame);
 
@@ -263,6 +319,18 @@
 
     puppyImage.addEventListener("load", preparePuppyImage);
     puppyImage.src = "下載.png";
+
+    photoImage.addEventListener("load", () => {
+      photoReady = true;
+    });
+    photoImage.addEventListener("error", () => {
+      photoReady = false;
+    });
+    photoImage.src = "207834.jpg";
+
+    if (photoImage.complete && photoImage.naturalWidth > 0) {
+      photoReady = true;
+    }
 
     if (puppyImage.complete && puppyImage.naturalWidth > 0) {
       preparePuppyImage();
