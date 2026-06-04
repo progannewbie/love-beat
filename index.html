@@ -50,10 +50,6 @@
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
     let time = 0;
 
-    const edgeParticles = [];
-    const glowParticles = [];
-    const dustParticles = [];
-
     function resize() {
       width = window.innerWidth;
       height = window.innerHeight;
@@ -76,61 +72,6 @@
       return { x: x * scale, y: -y * scale };
     }
 
-    function rand(min, max) {
-      return Math.random() * (max - min) + min;
-    }
-
-    function makeParticles() {
-      edgeParticles.length = 0;
-      glowParticles.length = 0;
-      dustParticles.length = 0;
-
-      for (let i = 0; i < 1500; i++) {
-        const t = Math.random() * Math.PI * 2;
-        const p = heartPoint(t, 10.8);
-        edgeParticles.push({
-          baseX: p.x,
-          baseY: p.y,
-          offset: rand(-2.5, 2.5),
-          drift: rand(0, Math.PI * 2),
-          size: rand(1.2, 2.3),
-          alpha: rand(0.6, 0.98),
-          colorType: Math.floor(rand(0, 3)),
-        });
-      }
-
-      for (let i = 0; i < 700; i++) {
-        const t = Math.random() * Math.PI * 2;
-        const p = heartPoint(t, rand(10.3, 11.6));
-        glowParticles.push({
-          baseX: p.x + rand(-6, 6),
-          baseY: p.y + rand(-6, 6),
-          drift: rand(0, Math.PI * 2),
-          size: rand(0.8, 1.6),
-          alpha: rand(0.10, 0.22),
-          colorType: Math.floor(rand(0, 3)),
-        });
-      }
-
-      for (let i = 0; i < 180; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = rand(50, 95);
-        dustParticles.push({
-          angle,
-          radius,
-          size: rand(0.7, 1.5),
-          alpha: rand(0.04, 0.12),
-          colorType: Math.floor(rand(0, 2)),
-        });
-      }
-    }
-
-    function getColor(type, alpha) {
-      if (type === 0) return `rgba(255, 120, 190, ${alpha})`;
-      if (type === 1) return `rgba(255, 175, 220, ${alpha})`;
-      return `rgba(255, 240, 248, ${alpha})`;
-    }
-
     function drawBackground() {
       const g = ctx.createRadialGradient(
         width * 0.66,
@@ -151,28 +92,32 @@
       if (width <= 620) {
         const dogSize = Math.min(width * 0.72, 300);
         return {
-          x: width * 0.5,
-          y: height * 0.58 + dogSize * 0.12,
-          scale: dogSize / 430,
+          dogX: width * 0.55,
+          dogY: height * 0.59,
+          heartX: width * 0.55 - dogSize * 0.3,
+          heartY: height * 0.59 - dogSize * 0.03,
+          scale: dogSize / 520,
           dogSize,
         };
       }
 
-      const dogSize = width <= 900 ? Math.min(width * 0.4, 260) : Math.min(width * 0.32, 360);
-      const right = width <= 900 ? width * 0.05 : width * 0.09;
-      const puppyLeft = width - right - dogSize;
+      const dogSize = width <= 900 ? Math.min(width * 0.36, 250) : Math.min(width * 0.28, 330);
+      const dogX = width <= 900 ? width * 0.57 : width * 0.58;
+      const dogY = height * 0.56;
 
       return {
-        x: puppyLeft + dogSize * 0.5,
-        y: height * 0.51 + dogSize * 0.12,
-        scale: dogSize / 360,
+        dogX,
+        dogY,
+        heartX: dogX - dogSize * 0.33,
+        heartY: dogY - dogSize * 0.03,
+        scale: dogSize / 520,
         dogSize,
       };
     }
 
-    function drawDogBack(cx, heartCy, dogSize) {
+    function drawDogBack(cx, centerY, dogSize) {
       const s = dogSize / 360;
-      const dogTop = heartCy - dogSize * 0.62;
+      const dogTop = centerY - dogSize * 0.5;
       const line = 12 * s;
 
       ctx.save();
@@ -185,56 +130,55 @@
 
       ctx.fillStyle = "#efd090";
       ctx.beginPath();
-      ctx.ellipse(cx - dogSize * 0.22, dogTop + dogSize * 0.2, dogSize * 0.13, dogSize * 0.2, -0.55, 0, Math.PI * 2);
+      ctx.ellipse(cx - dogSize * 0.25, dogTop + dogSize * 0.16, dogSize * 0.12, dogSize * 0.17, -0.75, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.ellipse(cx + dogSize * 0.22, dogTop + dogSize * 0.2, dogSize * 0.13, dogSize * 0.2, 0.55, 0, Math.PI * 2);
+      ctx.ellipse(cx + dogSize * 0.18, dogTop + dogSize * 0.12, dogSize * 0.1, dogSize * 0.16, 0.42, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = "#f2d39b";
       ctx.beginPath();
-      ctx.roundRect(cx - dogSize * 0.24, dogTop + dogSize * 0.22, dogSize * 0.48, dogSize * 0.61, dogSize * 0.16);
+      ctx.roundRect(cx - dogSize * 0.23, dogTop + dogSize * 0.22, dogSize * 0.46, dogSize * 0.58, dogSize * 0.14);
       ctx.fill();
       ctx.stroke();
 
       ctx.strokeStyle = "#ff6165";
       ctx.lineWidth = 7 * s;
       ctx.beginPath();
-      ctx.moveTo(cx - dogSize * 0.18, dogTop + dogSize * 0.39);
-      ctx.quadraticCurveTo(cx, dogTop + dogSize * 0.405, cx + dogSize * 0.18, dogTop + dogSize * 0.38);
+      ctx.moveTo(cx - dogSize * 0.16, dogTop + dogSize * 0.44);
+      ctx.quadraticCurveTo(cx, dogTop + dogSize * 0.46, cx + dogSize * 0.18, dogTop + dogSize * 0.43);
       ctx.stroke();
 
       ctx.fillStyle = "#050505";
       ctx.shadowBlur = 0;
       ctx.beginPath();
-      ctx.arc(cx - dogSize * 0.1, dogTop + dogSize * 0.32, dogSize * 0.018, 0, Math.PI * 2);
-      ctx.arc(cx + dogSize * 0.1, dogTop + dogSize * 0.32, dogSize * 0.018, 0, Math.PI * 2);
+      ctx.arc(cx - dogSize * 0.1, dogTop + dogSize * 0.34, dogSize * 0.018, 0, Math.PI * 2);
+      ctx.arc(cx + dogSize * 0.1, dogTop + dogSize * 0.34, dogSize * 0.018, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.beginPath();
-      ctx.ellipse(cx, dogTop + dogSize * 0.35, dogSize * 0.026, dogSize * 0.019, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, dogTop + dogSize * 0.37, dogSize * 0.026, dogSize * 0.019, 0, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.strokeStyle = "#050505";
       ctx.lineWidth = 7 * s;
       ctx.beginPath();
-      ctx.moveTo(cx, dogTop + dogSize * 0.36);
-      ctx.lineTo(cx, dogTop + dogSize * 0.39);
-      ctx.quadraticCurveTo(cx - dogSize * 0.055, dogTop + dogSize * 0.43, cx - dogSize * 0.11, dogTop + dogSize * 0.39);
-      ctx.moveTo(cx, dogTop + dogSize * 0.39);
-      ctx.quadraticCurveTo(cx + dogSize * 0.055, dogTop + dogSize * 0.43, cx + dogSize * 0.11, dogTop + dogSize * 0.39);
+      ctx.moveTo(cx, dogTop + dogSize * 0.38);
+      ctx.lineTo(cx, dogTop + dogSize * 0.41);
+      ctx.quadraticCurveTo(cx - dogSize * 0.055, dogTop + dogSize * 0.45, cx - dogSize * 0.11, dogTop + dogSize * 0.41);
+      ctx.moveTo(cx, dogTop + dogSize * 0.41);
+      ctx.quadraticCurveTo(cx + dogSize * 0.055, dogTop + dogSize * 0.45, cx + dogSize * 0.11, dogTop + dogSize * 0.41);
       ctx.stroke();
 
       ctx.restore();
     }
 
-    function drawDogFrontPaws(cx, heartCy, dogSize) {
+    function drawDogFrontPaws(cx, centerY, dogSize) {
       const s = dogSize / 360;
-      const dogTop = heartCy - dogSize * 0.62;
-      const pawY = dogTop + dogSize * 0.57;
+      const dogTop = centerY - dogSize * 0.5;
 
       ctx.save();
       ctx.strokeStyle = "#050505";
@@ -245,99 +189,54 @@
       ctx.shadowColor = "rgba(0, 0, 0, 0.35)";
 
       ctx.beginPath();
-      ctx.moveTo(cx - dogSize * 0.23, pawY - dogSize * 0.02);
-      ctx.quadraticCurveTo(cx - dogSize * 0.16, pawY + dogSize * 0.09, cx - dogSize * 0.02, pawY + dogSize * 0.05);
+      ctx.moveTo(cx - dogSize * 0.22, dogTop + dogSize * 0.52);
+      ctx.quadraticCurveTo(cx - dogSize * 0.35, dogTop + dogSize * 0.53, cx - dogSize * 0.42, dogTop + dogSize * 0.48);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(cx + dogSize * 0.23, pawY - dogSize * 0.02);
-      ctx.quadraticCurveTo(cx + dogSize * 0.16, pawY + dogSize * 0.09, cx + dogSize * 0.02, pawY + dogSize * 0.05);
+      ctx.moveTo(cx - dogSize * 0.04, dogTop + dogSize * 0.55);
+      ctx.quadraticCurveTo(cx - dogSize * 0.13, dogTop + dogSize * 0.56, cx - dogSize * 0.2, dogTop + dogSize * 0.5);
       ctx.stroke();
 
       ctx.strokeStyle = "rgba(242, 211, 155, 0.82)";
       ctx.lineWidth = 7 * s;
       ctx.beginPath();
-      ctx.moveTo(cx - dogSize * 0.215, pawY - dogSize * 0.015);
-      ctx.quadraticCurveTo(cx - dogSize * 0.15, pawY + dogSize * 0.07, cx - dogSize * 0.035, pawY + dogSize * 0.045);
-      ctx.moveTo(cx + dogSize * 0.215, pawY - dogSize * 0.015);
-      ctx.quadraticCurveTo(cx + dogSize * 0.15, pawY + dogSize * 0.07, cx + dogSize * 0.035, pawY + dogSize * 0.045);
+      ctx.moveTo(cx - dogSize * 0.21, dogTop + dogSize * 0.515);
+      ctx.quadraticCurveTo(cx - dogSize * 0.34, dogTop + dogSize * 0.515, cx - dogSize * 0.4, dogTop + dogSize * 0.475);
+      ctx.moveTo(cx - dogSize * 0.045, dogTop + dogSize * 0.54);
+      ctx.quadraticCurveTo(cx - dogSize * 0.13, dogTop + dogSize * 0.54, cx - dogSize * 0.185, dogTop + dogSize * 0.495);
       ctx.stroke();
 
       ctx.restore();
     }
 
-    function drawHeartbeatLine(cx, cy, beat, scale) {
-      const points = [
-        [-70, 0],
-        [-42, 0],
-        [-32, -18],
-        [-20, 24],
-        [-8, -34],
-        [6, 0],
-        [28, 0],
-        [38, -14],
-        [50, 0],
-        [70, 0],
-      ];
-
+    function drawFilledHeart(cx, cy, beat, scale) {
       ctx.save();
-      ctx.translate(cx, cy + 6 * scale);
+      ctx.translate(cx, cy);
       ctx.scale(scale * beat, scale * beat);
       ctx.beginPath();
-      points.forEach(([x, y], index) => {
-        if (index === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.lineWidth = 5;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      ctx.strokeStyle = "rgba(255, 245, 252, 0.96)";
+      for (let t = 0; t <= Math.PI * 2 + 0.01; t += 0.02) {
+        const p = heartPoint(t, 10.8);
+        if (t === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.closePath();
+
+      const fill = ctx.createLinearGradient(0, -120, 0, 120);
+      fill.addColorStop(0, "#ff8d91");
+      fill.addColorStop(0.58, "#ff686d");
+      fill.addColorStop(1, "#e84c56");
+
       ctx.shadowBlur = 18;
-      ctx.shadowColor = "rgba(255, 120, 190, 0.95)";
+      ctx.shadowColor = "rgba(255, 104, 109, 0.7)";
+      ctx.fillStyle = fill;
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 10;
+      ctx.strokeStyle = "#050505";
       ctx.stroke();
       ctx.restore();
-    }
-
-    function drawParticleHeart(cx, cy, beat, scale = 1) {
-      for (const p of glowParticles) {
-        const moveX = Math.cos(time * 0.8 + p.drift) * 1.6;
-        const moveY = Math.sin(time * 0.8 + p.drift) * 1.6;
-        const x = cx + (p.baseX + moveX) * beat * scale;
-        const y = cy + (p.baseY + moveY) * beat * scale;
-        ctx.beginPath();
-        ctx.arc(x, y, p.size * scale, 0, Math.PI * 2);
-        ctx.fillStyle = getColor(p.colorType, p.alpha);
-        ctx.shadowBlur = 13;
-        ctx.shadowColor = getColor(p.colorType, Math.min(1, p.alpha + 0.16));
-        ctx.fill();
-      }
-
-      for (const p of edgeParticles) {
-        const jitterX = Math.cos(time * 1.4 + p.drift) * p.offset * 0.22;
-        const jitterY = Math.sin(time * 1.7 + p.drift) * p.offset * 0.22;
-        const x = cx + (p.baseX + jitterX) * beat * scale;
-        const y = cy + (p.baseY + jitterY) * beat * scale;
-        ctx.beginPath();
-        ctx.arc(x, y, p.size * scale, 0, Math.PI * 2);
-        ctx.fillStyle = getColor(p.colorType, p.alpha);
-        ctx.shadowBlur = 9;
-        ctx.shadowColor = getColor(p.colorType, Math.min(1, p.alpha + 0.12));
-        ctx.fill();
-      }
-
-      for (const p of dustParticles) {
-        const swirl = time * 0.07 + p.angle;
-        const x = cx + Math.cos(swirl) * p.radius * scale;
-        const y = cy + Math.sin(swirl) * p.radius * 0.72 * scale;
-        ctx.beginPath();
-        ctx.arc(x, y, p.size * scale, 0, Math.PI * 2);
-        ctx.fillStyle = getColor(p.colorType, p.alpha);
-        ctx.shadowBlur = 5;
-        ctx.shadowColor = getColor(p.colorType, p.alpha);
-        ctx.fill();
-      }
-
-      drawHeartbeatLine(cx, cy, beat, scale);
     }
 
     function animate() {
@@ -352,19 +251,17 @@
         0.006 * Math.sin(time * 9.6);
 
       const heldHeart = getHeldHeartPosition();
-      drawDogBack(heldHeart.x, heldHeart.y, heldHeart.dogSize);
-      drawParticleHeart(heldHeart.x, heldHeart.y, beat, heldHeart.scale);
-      drawDogFrontPaws(heldHeart.x, heldHeart.y, heldHeart.dogSize);
+      drawDogBack(heldHeart.dogX, heldHeart.dogY, heldHeart.dogSize);
+      drawFilledHeart(heldHeart.heartX, heldHeart.heartY, beat, heldHeart.scale);
+      drawDogFrontPaws(heldHeart.dogX, heldHeart.dogY, heldHeart.dogSize);
       requestAnimationFrame(animate);
     }
 
     resize();
-    makeParticles();
     animate();
 
     window.addEventListener("resize", () => {
       resize();
-      makeParticles();
     });
   </script>
 </body>
