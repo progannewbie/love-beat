@@ -55,7 +55,7 @@
 </head>
 <body>
   <canvas id="canvas"></canvas>
-  <div class="hint">拖曳旋轉 · 滾輪縮放 · 雙擊重置</div>
+  <div class="hint">Drag to rotate · Wheel to zoom · Double-click to reset</div>
   <div class="label">Love Beat · 3D</div>
 
   <script>
@@ -64,7 +64,7 @@
 
     let width = 0;
     let height = 0;
-    let dpr = 1;
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
     let time = 0;
 
     const totalPoints = 3600;
@@ -82,6 +82,7 @@
     let drag = false;
     let lastX = 0;
     let lastY = 0;
+    let activePointerId = null;
 
     function heartCurve(t) {
       const x = 16 * Math.pow(Math.sin(t), 3);
@@ -259,7 +260,6 @@
       rotX += (targetRotX - rotX) * 0.09;
       rotY += (targetRotY - rotY) * 0.09;
       zoom += (targetZoom - zoom) * 0.14;
-      targetZoom = zoom;
 
       if (!drag) {
         targetRotY += 0.0022;
@@ -277,6 +277,7 @@
       canvas.classList.add("dragging");
       lastX = e.clientX;
       lastY = e.clientY;
+      activePointerId = e.pointerId;
       canvas.setPointerCapture(e.pointerId);
     });
 
@@ -292,9 +293,15 @@
       targetRotX = Math.max(-1.0, Math.min(1.0, targetRotX));
     });
 
-    function stopDrag() {
+    function stopDrag(e) {
       drag = false;
       canvas.classList.remove("dragging");
+      if (activePointerId !== null && canvas.hasPointerCapture(activePointerId)) {
+        canvas.releasePointerCapture(activePointerId);
+      }
+      if (e && e.pointerId === activePointerId) {
+        activePointerId = null;
+      }
     }
 
     canvas.addEventListener("pointerup", stopDrag);
@@ -310,7 +317,7 @@
       { passive: false }
     );
 
-    window.addEventListener("dblclick", () => {
+    canvas.addEventListener("dblclick", () => {
       targetRotX = -0.18;
       targetRotY = 0.28;
       targetZoom = 18;
