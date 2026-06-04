@@ -23,23 +23,10 @@
       width: 100%;
       height: 100%;
     }
-
-    .label {
-      position: fixed;
-      left: 50%;
-      bottom: 24px;
-      transform: translateX(-50%);
-      color: rgba(255, 230, 245, 0.85);
-      font-size: 14px;
-      letter-spacing: 2px;
-      text-shadow: 0 0 12px rgba(255, 100, 180, 0.45);
-      pointer-events: none;
-    }
   </style>
 </head>
 <body>
   <canvas id="canvas"></canvas>
-  <div class="label">Love Beat</div>
 
   <script>
     const canvas = document.getElementById("canvas");
@@ -57,12 +44,10 @@
     function resize() {
       width = window.innerWidth;
       height = window.innerHeight;
-
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       canvas.style.width = width + "px";
       canvas.style.height = height + "px";
-
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
@@ -73,29 +58,11 @@
         5 * Math.cos(2 * t) -
         2 * Math.cos(3 * t) -
         Math.cos(4 * t);
-
-      return {
-        x: x * scale,
-        y: -y * scale,
-      };
+      return { x: x * scale, y: -y * scale };
     }
 
     function rand(min, max) {
       return Math.random() * (max - min) + min;
-    }
-
-    function clamp(value, min, max) {
-      return Math.min(max, Math.max(min, value));
-    }
-
-    function lerp(start, end, t) {
-      return start + (end - start) * t;
-    }
-
-    function easeInOutCubic(t) {
-      return t < 0.5
-        ? 4 * t * t * t
-        : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
     function makeParticles() {
@@ -103,52 +70,49 @@
       glowParticles.length = 0;
       dustParticles.length = 0;
 
-      for (let i = 0; i < 2200; i++) {
+      for (let i = 0; i < 1800; i++) {
         const t = Math.random() * Math.PI * 2;
-        const p = heartPoint(t, 11.5);
-
+        const p = heartPoint(t, 10.8);
         edgeParticles.push({
           baseX: p.x,
           baseY: p.y,
-          offset: rand(-6, 6),
+          offset: rand(-3, 3),
           drift: rand(0, Math.PI * 2),
-          size: rand(1.2, 2.7),
-          alpha: rand(0.45, 0.95),
-          colorType: Math.floor(rand(0, 3)),
-        });
-      }
-
-      for (let i = 0; i < 1600; i++) {
-        const t = Math.random() * Math.PI * 2;
-        const p = heartPoint(t, rand(10.5, 13.5));
-
-        glowParticles.push({
-          baseX: p.x + rand(-14, 14),
-          baseY: p.y + rand(-14, 14),
-          drift: rand(0, Math.PI * 2),
-          size: rand(1, 2.4),
-          alpha: rand(0.12, 0.4),
+          size: rand(1.3, 2.5),
+          alpha: rand(0.55, 0.98),
           colorType: Math.floor(rand(0, 3)),
         });
       }
 
       for (let i = 0; i < 900; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = rand(70, 170);
+        const t = Math.random() * Math.PI * 2;
+        const p = heartPoint(t, rand(10.3, 11.8));
+        glowParticles.push({
+          baseX: p.x + rand(-8, 8),
+          baseY: p.y + rand(-8, 8),
+          drift: rand(0, Math.PI * 2),
+          size: rand(0.8, 1.8),
+          alpha: rand(0.12, 0.28),
+          colorType: Math.floor(rand(0, 3)),
+        });
+      }
 
+      for (let i = 0; i < 300; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = rand(55, 110);
         dustParticles.push({
           angle,
           radius,
-          size: rand(0.8, 2.2),
-          alpha: rand(0.08, 0.3),
-          colorType: Math.floor(rand(0, 3)),
+          size: rand(0.8, 1.8),
+          alpha: rand(0.06, 0.16),
+          colorType: Math.floor(rand(0, 2)),
         });
       }
     }
 
     function getColor(type, alpha) {
-      if (type === 0) return `rgba(255, 105, 180, ${alpha})`;
-      if (type === 1) return `rgba(255, 160, 220, ${alpha})`;
+      if (type === 0) return `rgba(255, 120, 190, ${alpha})`;
+      if (type === 1) return `rgba(255, 175, 220, ${alpha})`;
       return `rgba(255, 235, 245, ${alpha})`;
     }
 
@@ -156,249 +120,171 @@
       const g = ctx.createRadialGradient(
         width / 2,
         height / 2,
-        20,
+        30,
         width / 2,
         height / 2,
-        Math.max(width, height) * 0.7
+        Math.max(width, height) * 0.72
       );
-
-      g.addColorStop(0, "rgba(25, 0, 18, 0.20)");
-      g.addColorStop(0.5, "rgba(8, 0, 8, 0.10)");
+      g.addColorStop(0, "rgba(28, 0, 18, 0.18)");
+      g.addColorStop(0.55, "rgba(8, 0, 8, 0.10)");
       g.addColorStop(1, "rgba(0, 0, 0, 1)");
-
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, width, height);
     }
 
-    function drawParticleHeart(cx, cy, beat, alphaScale = 1) {
-      const safeAlpha = clamp(alphaScale, 0, 1);
-
+    function drawParticleHeart(cx, cy, beat) {
       for (const p of glowParticles) {
-        const moveX = Math.cos(time * 0.8 + p.drift) * 3;
-        const moveY = Math.sin(time * 0.8 + p.drift) * 3;
-
+        const moveX = Math.cos(time * 0.8 + p.drift) * 1.8;
+        const moveY = Math.sin(time * 0.8 + p.drift) * 1.8;
         const x = cx + (p.baseX + moveX) * beat;
         const y = cy + (p.baseY + moveY) * beat;
-
         ctx.beginPath();
         ctx.arc(x, y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = getColor(p.colorType, p.alpha * safeAlpha);
-        ctx.shadowBlur = 18;
-        ctx.shadowColor = getColor(
-          p.colorType,
-          Math.min(1, (p.alpha + 0.2) * safeAlpha)
-        );
+        ctx.fillStyle = getColor(p.colorType, p.alpha);
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = getColor(p.colorType, Math.min(1, p.alpha + 0.18));
         ctx.fill();
       }
 
       for (const p of edgeParticles) {
-        const pulse = 1 + 0.03 * Math.sin(time * 3 + p.drift);
-        const jitterX = Math.cos(time * 1.6 + p.drift) * p.offset * 0.15;
-        const jitterY = Math.sin(time * 1.8 + p.drift) * p.offset * 0.15;
-
-        const x = cx + (p.baseX + jitterX) * beat * pulse;
-        const y = cy + (p.baseY + jitterY) * beat * pulse;
-
+        const jitterX = Math.cos(time * 1.4 + p.drift) * p.offset * 0.2;
+        const jitterY = Math.sin(time * 1.7 + p.drift) * p.offset * 0.2;
+        const x = cx + (p.baseX + jitterX) * beat;
+        const y = cy + (p.baseY + jitterY) * beat;
         ctx.beginPath();
         ctx.arc(x, y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = getColor(p.colorType, p.alpha * safeAlpha);
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = getColor(
-          p.colorType,
-          Math.min(1, (p.alpha + 0.2) * safeAlpha)
-        );
+        ctx.fillStyle = getColor(p.colorType, p.alpha);
+        ctx.shadowBlur = 9;
+        ctx.shadowColor = getColor(p.colorType, Math.min(1, p.alpha + 0.14));
         ctx.fill();
       }
 
       for (const p of dustParticles) {
-        const swirl = time * 0.12 + p.angle;
+        const swirl = time * 0.08 + p.angle;
         const x = cx + Math.cos(swirl) * p.radius;
-        const y = cy + Math.sin(swirl) * p.radius * 0.7;
-
+        const y = cy + Math.sin(swirl) * p.radius * 0.72;
         ctx.beginPath();
         ctx.arc(x, y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = getColor(p.colorType, p.alpha * safeAlpha);
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = getColor(p.colorType, p.alpha * safeAlpha);
+        ctx.fillStyle = getColor(p.colorType, p.alpha);
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = getColor(p.colorType, p.alpha);
         ctx.fill();
       }
     }
 
-    function getSceneState(beat) {
-      const phase = (time % 12) / 12;
-      const enterProgress = clamp((phase - 0.02) / 0.22, 0, 1);
-      const takeProgress = clamp((phase - 0.30) / 0.20, 0, 1);
-      const holdProgress = clamp((phase - 0.50) / 0.14, 0, 1);
-      const enterEase = easeInOutCubic(enterProgress);
-      const takeEase = easeInOutCubic(takeProgress);
-
-      const puppyStartX = -60;
-      const puppyNearHeartX = width / 2 - 120;
-      const puppyHoldX = width / 2 - 48;
-      const puppyBaseY = height / 2 + 72;
-
-      const walkBob = Math.sin(time * 8) * 3.2 * enterProgress * (1 - takeProgress);
-      const cuddleBob = Math.sin(time * 5.6) * 1.6 * holdProgress;
-
-      const approachX = lerp(puppyStartX, puppyNearHeartX, enterEase);
-      const puppyX = lerp(approachX, puppyHoldX, takeEase);
-      const puppyY = puppyBaseY + walkBob - cuddleBob;
-
-      const heartStartX = width / 2;
-      const heartStartY = height / 2 - 10;
-      const heartTargetX = puppyX + 78;
-      const heartTargetY = puppyY - 54;
-
-      return {
-        puppyVisible: true,
-        puppyX,
-        puppyY,
-        puppyScale: 1.18 + 0.05 * holdProgress,
-        takeProgress: takeEase,
-        holdProgress,
-        heartX: lerp(heartStartX, heartTargetX, takeEase),
-        heartY: lerp(heartStartY, heartTargetY, takeEase),
-        heartScale: beat * (1 - 0.38 * takeEase),
-        heartAlpha: 1 - 0.12 * takeEase,
-      };
-    }
-
-    function drawPuppy(x, y, scale, takeProgress, holdProgress) {
+    function drawPuppy(x, y, scale, cuddle) {
       ctx.save();
       ctx.translate(x, y);
       ctx.scale(scale, scale);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
+
+      const line = "#171717";
+      const fur = "#e3c28e";
+      const ear = "#d8ab70";
+      const collar = "#ff8ca3";
+      const bob = Math.sin(time * 2.8) * 1.5;
+      const pawLift = 4 + cuddle * 5;
+
       ctx.lineWidth = 4;
-
-      const furColor = "#e0c08a";
-      const earColor = "#d3a56b";
-      const lineColor = "#111111";
-      const collarColor = "#ff7a8f";
-      const walkSwing = Math.sin(time * 10) * 3.2 * (1 - takeProgress);
-      const armReach = 14 * takeProgress;
-      const cuddleLift = 6 * holdProgress;
-
-      ctx.strokeStyle = lineColor;
-      ctx.fillStyle = furColor;
+      ctx.strokeStyle = line;
+      ctx.fillStyle = fur;
 
       ctx.beginPath();
-      ctx.ellipse(0, 0, 54, 44, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 14 + bob, 42, 36, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.ellipse(8, -58, 52, 42, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, -38 + bob, 38, 32, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = earColor;
+      ctx.fillStyle = ear;
       ctx.beginPath();
-      ctx.ellipse(-22, -96, 15, 27, -0.32, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.ellipse(40, -96, 15, 27, 0.32, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = furColor;
-      ctx.beginPath();
-      ctx.ellipse(-36, 38 + walkSwing, 10, 22, 0, 0, Math.PI * 2);
+      ctx.ellipse(-22, -72 + bob, 12, 23, -0.28, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.ellipse(-8, 40 - walkSwing, 10, 22, 0, 0, Math.PI * 2);
+      ctx.ellipse(22, -72 + bob, 12, 23, 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = fur;
+      ctx.beginPath();
+      ctx.ellipse(-22, 58 + bob, 9, 20, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.ellipse(28, 38 + walkSwing * 0.6, 10, 21, 0, 0, Math.PI * 2);
+      ctx.ellipse(2, 60 + bob, 9, 20, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.ellipse(-18, -4 - cuddleLift, 10, 20, -0.42, 0, Math.PI * 2);
+      ctx.ellipse(-22, 28 - pawLift + bob, 9, 19, -0.45, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.ellipse(30 + armReach, -10 - armReach * 0.35 - cuddleLift, 10, 22, 0.6, 0, Math.PI * 2);
+      ctx.ellipse(22, 28 - pawLift + bob, 9, 19, 0.45, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.beginPath();
-      ctx.moveTo(-12, -32);
-      ctx.quadraticCurveTo(8, -24, 28, -28);
-      ctx.strokeStyle = collarColor;
       ctx.lineWidth = 3;
+      ctx.strokeStyle = collar;
+      ctx.beginPath();
+      ctx.moveTo(-21, -14 + bob);
+      ctx.quadraticCurveTo(0, -8 + bob, 21, -14 + bob);
       ctx.stroke();
 
-      ctx.strokeStyle = lineColor;
-      ctx.lineWidth = 4;
-      ctx.fillStyle = lineColor;
+      ctx.fillStyle = line;
       ctx.beginPath();
-      ctx.arc(-6, -64, 3.6, 0, Math.PI * 2);
-      ctx.arc(18, -64, 3.6, 0, Math.PI * 2);
+      ctx.arc(-10, -42 + bob, 3.2, 0, Math.PI * 2);
+      ctx.arc(10, -42 + bob, 3.2, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.beginPath();
-      ctx.arc(6, -52, 4.2, 0, Math.PI * 2);
+      ctx.arc(0, -30 + bob, 3.8, 0, Math.PI * 2);
       ctx.fill();
 
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = line;
       ctx.beginPath();
-      ctx.moveTo(6, -48);
-      ctx.quadraticCurveTo(0, -42, -8, -45);
-      ctx.moveTo(6, -48);
-      ctx.quadraticCurveTo(12, -42, 20, -45);
+      ctx.moveTo(0, -26 + bob);
+      ctx.quadraticCurveTo(-6, -20 + bob, -13, -24 + bob);
+      ctx.moveTo(0, -26 + bob);
+      ctx.quadraticCurveTo(6, -20 + bob, 13, -24 + bob);
       ctx.stroke();
 
-      ctx.restore();
-    }
-
-    function drawText() {
-      ctx.save();
-      ctx.textAlign = "center";
-      ctx.font = "16px Arial";
-      ctx.fillStyle = "rgba(255, 220, 240, 0.8)";
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = "rgba(255, 105, 180, 0.8)";
-      ctx.fillText("Love Beat", width / 2, height - 28);
       ctx.restore();
     }
 
     function animate() {
       time += 0.016;
-
       ctx.clearRect(0, 0, width, height);
       drawBackground();
 
       const beat =
         1 +
-        0.045 * Math.sin(time * 2.4) +
-        0.02 * Math.sin(time * 4.8) +
-        0.01 * Math.sin(time * 9.6);
+        0.035 * Math.sin(time * 2.4) +
+        0.016 * Math.sin(time * 4.8) +
+        0.008 * Math.sin(time * 9.6);
 
-      const scene = getSceneState(beat);
-      drawParticleHeart(scene.heartX, scene.heartY, scene.heartScale, scene.heartAlpha);
-      drawPuppy(
-        scene.puppyX,
-        scene.puppyY,
-        scene.puppyScale,
-        scene.takeProgress,
-        scene.holdProgress
-      );
+      const heartX = width * 0.60;
+      const heartY = height * 0.47;
+      drawParticleHeart(heartX, heartY, beat);
 
-      drawText();
+      const cuddle = 0.5 + 0.5 * Math.sin(time * 2.4);
+      drawPuppy(width * 0.36, height * 0.60, 1.28, cuddle);
+
       requestAnimationFrame(animate);
     }
 
     resize();
     makeParticles();
     animate();
-
     window.addEventListener("resize", () => {
       resize();
       makeParticles();
