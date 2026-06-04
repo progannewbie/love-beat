@@ -235,7 +235,7 @@
 
       ctx.beginPath();
       for (let t = 0; t <= Math.PI * 2 + 0.01; t += 0.03) {
-        const p = heartPoint(t, 2.15);
+        const p = heartPoint(t, 3.23);
         if (t === 0) ctx.moveTo(p.x, p.y);
         else ctx.lineTo(p.x, p.y);
       }
@@ -247,50 +247,12 @@
       ctx.fill();
       ctx.clip();
 
-      const photoSize = 82;
+      const photoSize = 123;
       const photoRatio = photoImage.naturalWidth / photoImage.naturalHeight;
-      let sx = 0;
-      let sy = 0;
-      let sw = photoImage.naturalWidth;
-      let sh = photoImage.naturalHeight;
+      const drawWidth = photoRatio >= 1 ? photoSize : photoSize * photoRatio;
+      const drawHeight = photoRatio >= 1 ? photoSize / photoRatio : photoSize;
 
-      if (photoRatio > 1) {
-        sw = photoImage.naturalHeight;
-        sx = (photoImage.naturalWidth - sw) / 2;
-      } else {
-        sh = photoImage.naturalWidth;
-        sy = (photoImage.naturalHeight - sh) / 2;
-      }
-
-      ctx.drawImage(photoImage, sx, sy, sw, sh, -photoSize / 2, -photoSize / 2, photoSize, photoSize);
-      ctx.restore();
-    }
-
-    function drawHoldingPaw(frame) {
-      const x = frame.x;
-      const y = frame.y;
-      const s = frame.size / 240;
-
-      ctx.save();
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = "#050505";
-      ctx.lineWidth = 6.5 * s;
-      ctx.shadowBlur = 4 * s;
-      ctx.shadowColor = "rgba(0, 0, 0, 0.55)";
-
-      ctx.beginPath();
-      ctx.moveTo(x - frame.size * 0.08, y + frame.size * 0.025);
-      ctx.quadraticCurveTo(x - frame.size * 0.17, y + frame.size * 0.02, x - frame.size * 0.245, y - frame.size * 0.035);
-      ctx.stroke();
-
-      ctx.strokeStyle = "#f1d49b";
-      ctx.lineWidth = 3.6 * s;
-      ctx.beginPath();
-      ctx.moveTo(x - frame.size * 0.085, y + frame.size * 0.018);
-      ctx.quadraticCurveTo(x - frame.size * 0.17, y + frame.size * 0.014, x - frame.size * 0.238, y - frame.size * 0.032);
-      ctx.stroke();
-
+      ctx.drawImage(photoImage, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
       ctx.restore();
     }
 
@@ -308,7 +270,6 @@
       drawPuppyBody(frame);
       drawPhotoInHeart(frame, beat);
       drawParticleHeart(frame, beat);
-      drawHoldingPaw(frame);
 
       requestAnimationFrame(animate);
     }
